@@ -1,0 +1,60 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model Conversation {
+  id        Int        @id @default(autoincrement())
+  name      String
+  mobile    String     @unique
+  createdAt DateTime   @default(now())
+
+  complaints Complaint[]
+
+  @@map("conversations")
+}
+
+model Complaint {
+  id             Int        @id @default(autoincrement())
+  complaintType  String
+  locationId     Int
+  machineId      String
+  description    String?
+  paymentAmount  Float?
+  status         String     @default("Pending")
+  createdAt      DateTime   @default(now())
+
+  customerName    String?
+  customerMobile  String?
+  coilNumber      String?
+  problemMediaUrl String?
+  paymentImageUrl String?
+  drinkType       String?
+
+  conversationId Int
+  conversation   Conversation @relation(fields: [conversationId], references: [id])
+
+  chatHistory    Json? // Stores complete chat history array
+  messages       Message[]
+
+  @@map("complaints")
+}
+
+model Message {
+  id          Int      @id @default(autoincrement())
+  text        String?
+  imageUrl    String?
+  videoUrl    String?
+  senderType  String
+  status      String   @default("delivered")
+  createdAt   DateTime @default(now())
+
+  complaintId Int
+  complaint   Complaint @relation(fields: [complaintId], references: [id])
+
+  @@map("messages")
+}

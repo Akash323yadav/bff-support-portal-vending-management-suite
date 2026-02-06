@@ -1,0 +1,75 @@
+POST http://localhost:4000/api/complaints
+Content-Type: application/json
+
+{
+  "name": "Akash Yadav",
+  "mobile": "9876543210",
+  "complaintType": "coffee",
+  "locationId": 1,
+  "machineId": "CM-101",
+  "description": "Coffee machine power on nahi ho rahi",
+  "paymentAmount": null
+}
+###
+POST http://localhost:4000/api/complaints
+Content-Type: application/json
+
+{
+  "name": "Akash Yadav",
+  "mobile": "9876542345",
+  "complaintType": "coffee",
+  "locationId": 1,
+  "machineId": "CM-101",
+  "description": "Coffee machine power on nahi ho rahi",
+  "paymentAmount": 20
+}
+
+###
+POST http://localhost:4000/api/complaints
+Content-Type: application/json
+
+{
+  "name": "vikash Yadav",
+  "mobile": "9193974167",
+  "complaintType": "snack",
+  "locationId": 5,
+  "machineId": "CM-101",
+  "description": "Coffee machine power on nahi ho rahi",
+  "paymentAmount": 20
+}
+
+
+
+###
+POST http://localhost:4000/api/messages/complaint/4
+Content-Type: application/json
+
+{
+  "text": "Hello, technician aa raha hai",
+  "senderType": "support"
+}
+
+###
+GET http://localhost:4000/api/messages/complaint/4
+###
+
+
+POST http://localhost:4000/api/messages/complaint/4
+Content-Type: application/json
+
+{
+  "text": "Hello, technician aa raha hai",
+  "senderType": "support"
+}
+###
+POST http://localhost:4000/api/complaints
+Content-Type: application/json
+
+{
+  "name": "Akash",
+  "mobile": "9999999999",
+  "complaintType": "Coffee",
+  "locationId": "MUJ001",
+  "machineId": "MUJ-M1",
+  "description": "Test complaint"
+}

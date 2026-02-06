@@ -1,0 +1,151 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@property --border-angle {
+  inherits: false;
+  initial-value: 0deg;
+  syntax: "<angle>";
+}
+
+@keyframes border {
+  to {
+    --border-angle: 360deg;
+  }
+}
+
+.animate-border {
+  --border-angle: 0deg;
+  animation: border 8s linear infinite;
+}
+
+.animated-border-container {
+  width: 100%;
+  height: 100%;
+  background:
+    linear-gradient(45deg, #172033, #1e293b 50%, #172033) padding-box,
+    conic-gradient(from var(--border-angle), rgba(100, 116, 139, 0.48) 80%, #06b6d4 86%, #67e8f9 90%, #06b6d4 94%, rgba(100, 116, 139, 0.48)) border-box;
+  border-radius: 1rem;
+  border: 1px solid transparent;
+  display: flex;
+  overflow: hidden;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(100, 116, 139, 0.3);
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(100, 116, 139, 0.5);
+}
+
+/* ====== GLOBAL DARK THEME ====== */
+body {
+  margin: 0;
+  background: #020617;
+  color: #f1f5f9;
+  font-family: "Inter", "Segoe UI", sans-serif;
+  overflow-x: hidden;
+}
+
+a {
+  text-decoration: none;
+  transition: all 0.3s ease;
+}
+
+/* INPUTS */
+.input-dark,
+.select-dark,
+.textarea-dark {
+  background: #0f172a;
+  border: 1px solid #1e293b;
+  color: #f1f5f9;
+  padding: 12px;
+  border-radius: 12px;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  outline: none;
+  transition: all 0.3s ease;
+  font-size: 16px;
+  /* Prevents auto-zoom on iOS and better for mobile touch */
+  display: block;
+}
+
+.select-dark {
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+}
+
+/* Specific fix for mobile select overflow */
+@media (max-width: 640px) {
+
+  .input-dark,
+  .select-dark,
+  .textarea-dark {
+    padding: 10px;
+    border-color: #334155;
+  }
+}
+
+.input-dark:focus,
+.select-dark:focus,
+.textarea-dark:focus {
+  border-color: #06b6d4;
+  box-shadow: 0 0 0 2px rgba(6, 182, 212, 0.1);
+}
+
+.input-dark::placeholder {
+  color: #475569;
+}
+
+/* BUTTONS */
+.btn-submit {
+  background: linear-gradient(135deg, #06b6d4, #3b82f6);
+  color: #ffffff;
+  padding: 12px 24px;
+  border-radius: 12px;
+  font-weight: 700;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(6, 182, 212, 0.2);
+}
+
+.btn-submit:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(6, 182, 212, 0.3);
+}
+
+/* TABLE OVERRIDES */
+.rdt_Table {
+  background-color: transparent !important;
+}
+
+.rdt_TableHeadRow {
+  background-color: #0f172a !important;
+  border-bottom: 1px solid #1e293b !important;
+}
+
+.rdt_TableRow {
+  background-color: rgba(15, 23, 42, 0.4) !important;
+  border-bottom: 1px solid #1e293b !important;
+  color: #f1f5f9 !important;
+}
+
+.rdt_TableRow:hover {
+  background-color: rgba(30, 41, 59, 0.6) !important;
+}
+
+.rdt_Pagination {
+  background-color: #0f172a !important;
+  color: #94a3b8 !important;
+  border-top: 1px solid #1e293b !important;
+}
