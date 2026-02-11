@@ -310,18 +310,45 @@ function ComplaintTable() {
       name: "Status",
       width: "150px",
       cell: (r) => (
-        <select
-          value={r.status}
-          onChange={(e) => handleStatusChange(r.id, e.target.value)}
-          className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest border-none outline-none cursor-pointer transition-all appearance-none text-center min-w-[110px] ${r.status === "Resolved" ? "bg-green-500/20 text-green-400 border border-green-500/30" :
-            r.status === "Pending" ? "bg-red-500/20 text-red-400 border border-red-500/30" :
-              "bg-amber-500/20 text-amber-400 border border-amber-500/30"
-            }`}
-        >
-          <option value="Pending" className="bg-slate-900 text-red-400">Pending</option>
-          <option value="In Progress" className="bg-slate-900 text-amber-400">In Progress</option>
-          <option value="Resolved" className="bg-slate-900 text-green-400">Resolved</option>
-        </select>
+        <div className="relative w-full flex items-center justify-center group">
+          <div className={`absolute inset-0 rounded-full blur-[10px] transition-all opacity-40 group-hover:opacity-70 ${r.status === "Resolved" ? "bg-emerald-500" :
+            r.status === "Pending" ? "bg-rose-500" :
+              "bg-amber-500"
+            }`}></div>
+          <select
+            value={r.status}
+            onChange={(e) => handleStatusChange(r.id, e.target.value)}
+            className={`
+              relative z-10
+              appearance-none 
+              px-4 py-2 
+              rounded-full 
+              text-[10px] 
+              font-extrabold 
+              uppercase 
+              tracking-widest 
+              cursor-pointer 
+              transition-all 
+              duration-300 
+              text-center 
+              w-[130px] 
+              outline-none 
+              border 
+              shadow-lg
+              backdrop-blur-xl
+              ${r.status === "Resolved"
+                ? "bg-slate-950/80 text-emerald-400 border-emerald-500/50 shadow-emerald-500/20 hover:border-emerald-400"
+                : r.status === "Pending"
+                  ? "bg-slate-950/80 text-rose-400 border-rose-500/50 shadow-rose-500/20 hover:border-rose-400"
+                  : "bg-slate-950/80 text-amber-400 border-amber-500/50 shadow-amber-500/20 hover:border-amber-400"
+              }
+            `}
+          >
+            <option value="Pending" className="bg-slate-950 text-rose-400 font-bold py-2">Pending</option>
+            <option value="In Progress" className="bg-slate-950 text-amber-400 font-bold py-2">In Progress</option>
+            <option value="Resolved" className="bg-slate-950 text-emerald-400 font-bold py-2">Resolved</option>
+          </select>
+        </div>
       ),
     },
     {

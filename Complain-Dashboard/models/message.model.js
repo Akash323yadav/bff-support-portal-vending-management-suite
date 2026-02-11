@@ -8,7 +8,8 @@ const createMessage = async ({
   senderType,
   text,
   imageUrl,
-  videoUrl
+  videoUrl,
+  replyToMessageId // 🆕 Reply reference
 }) => {
   // 1. Get current history
   const [rows] = await db.query(
@@ -27,6 +28,12 @@ const createMessage = async ({
   // Ensure array
   if (!Array.isArray(history)) history = [];
 
+  // 🆕 Get replied message if replying
+  let repliedMessage = null;
+  if (replyToMessageId) {
+    repliedMessage = history.find(m => m.id === parseInt(replyToMessageId));
+  }
+
   // 2. Prepare new message
   const newMessage = {
     id: Date.now(), // Generate ID
@@ -35,6 +42,12 @@ const createMessage = async ({
     text: text || null,
     image_url: imageUrl || null,
     video_url: videoUrl || null,
+    reply_to_message_id: replyToMessageId || null, // 🆕 Reply reference
+    replied_message: repliedMessage ? { // 🆕 Quoted message preview
+      id: repliedMessage.id,
+      text: repliedMessage.text || "Media",
+      sender_type: repliedMessage.sender_type
+    } : null,
     created_at: new Date(),
     status: 'sent' // WhatsApp: Single Grey Tick (Sent to server)
   };

@@ -14,6 +14,7 @@ async function createComplaintDB(data) {
       complaintType,
       locationId,
       machineId,
+      machineName,
       description,
       paymentAmount,
       coilNumber,
@@ -22,7 +23,7 @@ async function createComplaintDB(data) {
       drinkType,
       status
     )
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       data.conversationId,
       data.customerName,
@@ -30,6 +31,7 @@ async function createComplaintDB(data) {
       data.complaintType,
       data.locationId,
       data.machineId,
+      data.machineName || data.machineId,
       data.description,
       data.paymentAmount || null,
       data.coilNumber || null,

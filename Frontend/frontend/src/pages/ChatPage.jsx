@@ -54,7 +54,7 @@ function ChatPage() {
   }
 
   return (
-    <div className="h-[calc(100vh-80px)] p-2 sm:p-6 overflow-hidden">
+    <div className="h-full p-2 sm:p-6 overflow-hidden">
       <BorderAnimatedContainer>
         {/* LEFT PANEL (Complaint List) */}
         <div

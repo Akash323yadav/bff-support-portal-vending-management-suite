@@ -28,6 +28,9 @@ function urlBase64ToUint8Array(base64String) {
 function UserChatPage() {
   const [searchParams] = useSearchParams();
   const complaintId = searchParams.get("complaintId");
+  const mobile = searchParams.get("mobile");
+  const isEmployee = searchParams.get("isEmployee") === "true";
+  const employeeName = searchParams.get("name") || localStorage.getItem('employeeName');
 
   // logic same as support page - use specific selectors
   const _hasHydrated = useChatStore(state => state._hasHydrated);
@@ -49,22 +52,38 @@ function UserChatPage() {
     zIndex: 10, display: "flex", flexDirection: "column", overflow: "hidden",
   }), []);
 
+  // For employee mode, create a virtual complaint object
   useEffect(() => {
-    if (!_hasHydrated || !complaintId) return;
-    const fetchDetails = async () => {
-      try {
-        const res = await api.get(`/api/complaints/${complaintId}`);
-        if (res.data) setUserComplaint(res.data);
-      } catch (error) {
-        console.error(error);
-        setUserComplaint({ complaint_id: complaintId });
-      }
-    };
-    fetchDetails();
-  }, [_hasHydrated, complaintId]);
+    if (!_hasHydrated) return;
+
+    if (isEmployee && mobile) {
+      // Employee chat mode - no real complaint
+      setUserComplaint({
+        complaint_id: `EMP_${mobile}`,
+        id: `EMP_${mobile}`,
+        customerName: employeeName || 'Employee',
+        customerMobile: mobile,
+        status: 'Active', // No status changes for employees
+        isEmployeeChat: true
+      });
+    } else if (complaintId) {
+      // Regular user mode
+      const fetchDetails = async () => {
+        try {
+          const res = await api.get(`/api/complaints/${complaintId}`);
+          if (res.data) setUserComplaint(res.data);
+        } catch (error) {
+          console.error(error);
+          setUserComplaint({ complaint_id: complaintId });
+        }
+      };
+      fetchDetails();
+    }
+  }, [_hasHydrated, complaintId, mobile, isEmployee]);
 
   useEffect(() => {
-    if (!_hasHydrated || !complaintId) return;
+    if (!_hasHydrated || (!complaintId && !isEmployee)) return;
+    if (isEmployee) return; // Skip push for employees
     if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
     if (typeof Notification !== 'undefined') {
       if (Notification.permission === 'granted') registerPush();
@@ -73,6 +92,7 @@ function UserChatPage() {
   }, [_hasHydrated, complaintId]);
 
   const registerPush = async () => {
+    if (!complaintId) return;
     try {
       await navigator.serviceWorker.register('/sw.js');
       const reg = await navigator.serviceWorker.ready;
@@ -112,8 +132,10 @@ function UserChatPage() {
     });
   };
 
-  // Hydration + ID Match check for zero flicker
-  const isReady = _hasHydrated && userComplaint && String(userComplaint.complaint_id || userComplaint.id) === String(complaintId);
+  // Hydration check - different for employee vs user
+  const isReady = isEmployee
+    ? (_hasHydrated && userComplaint && userComplaint.isEmployeeChat)
+    : (_hasHydrated && userComplaint && String(userComplaint.complaint_id || userComplaint.id) === String(complaintId));
 
   if (!isReady) {
     return (
@@ -123,7 +145,7 @@ function UserChatPage() {
     );
   }
 
-  // Progress logic for the thin bar
+  // Progress logic for the thin bar (hide for employees)
   const status = userComplaint?.status || "Pending";
   const progressWidth = status === "Resolved" ? "100%" : status === "In Progress" ? "50%" : "15%";
   const statusColor = status === "Resolved" ? "bg-green-500" : status === "In Progress" ? "bg-cyan-500" : "bg-amber-500";
@@ -151,31 +173,45 @@ function UserChatPage() {
 
                 <div className="flex flex-col">
                   <div className="flex items-center gap-2">
-                    <span className="text-xs font-black text-white uppercase tracking-wider">Live Support</span>
+                    <span className="text-xs font-black text-white uppercase tracking-wider">
+                      {isEmployee ? 'Employee Support' : 'Live Support'}
+                    </span>
                   </div>
                   <div className="flex items-center gap-2 text-[10px] text-slate-500 font-bold">
-                    <span className="uppercase tracking-tighter">Case #{complaintId}</span>
-                    <span className="text-slate-700">•</span>
-                    <span className={`uppercase tracking-tighter ${status === "Resolved" ? "text-green-500" : status === "In Progress" ? "text-cyan-500" : "text-amber-500"}`}>
-                      {status}
-                    </span>
+                    {isEmployee ? (
+                      <>
+                        <span className="uppercase tracking-tighter">{employeeName}</span>
+                        <span className="text-slate-700">•</span>
+                        <span className="uppercase tracking-tighter text-cyan-500">Active</span>
+                      </>
+                    ) : (
+                      <>
+                        <span className="uppercase tracking-tighter">Case #{complaintId}</span>
+                        <span className="text-slate-700">•</span>
+                        <span className={`uppercase tracking-tighter ${status === "Resolved" ? "text-green-500" : status === "In Progress" ? "text-cyan-500" : "text-amber-500"}`}>
+                          {status}
+                        </span>
+                      </>
+                    )}
                   </div>
                 </div>
               </div>
 
               {/* Right: Modern Actions */}
               <div className="flex items-center gap-2.5">
-                <button
-                  onClick={handleEnableNotifications}
-                  className={`w-9 h-9 rounded-xl border flex items-center justify-center transition-all active:scale-90
-                    ${notificationStatus === 'granted' ? "bg-white/5 border-white/10 text-white/70" : "bg-red-500/10 border-red-500/20 text-red-500 animate-pulse"}
-                  `}
-                >
-                  {notificationStatus === 'granted' ? <span className="text-sm">🔔</span> : <span className="text-sm">🔕</span>}
-                </button>
+                {!isEmployee && (
+                  <button
+                    onClick={handleEnableNotifications}
+                    className={`w-9 h-9 rounded-xl border flex items-center justify-center transition-all active:scale-90
+                      ${notificationStatus === 'granted' ? "bg-white/5 border-white/10 text-white/70" : "bg-red-500/10 border-red-500/20 text-red-500 animate-pulse"}
+                    `}
+                  >
+                    {notificationStatus === 'granted' ? <span className="text-sm">🔔</span> : <span className="text-sm">🔕</span>}
+                  </button>
+                )}
                 <div className="w-[1px] h-6 bg-white/10 mx-1"></div>
                 <button
-                  onClick={() => window.location.href = '/'}
+                  onClick={() => window.location.href = isEmployee ? '/employee-login' : '/'}
                   className="w-9 h-9 rounded-xl bg-white/5 border border-white/10 text-white/40 flex items-center justify-center hover:bg-white/10 hover:text-white transition-all active:scale-95"
                 >
                   <span className="text-base font-light">✕</span>
@@ -183,18 +219,20 @@ function UserChatPage() {
               </div>
             </div>
 
-            {/* 🌊 Ultra-thin Glowing Progress Indicator */}
-            <div className="absolute bottom-[-1px] left-0 w-full h-[1px] bg-white/5">
-              <div
-                className={`h-full ${statusColor} transition-all duration-1000 ease-out shadow-[0_0_15px_${status === "Resolved" ? "rgba(34,197,94,0.5)" : status === "In Progress" ? "rgba(6,182,212,0.5)" : "rgba(245,158,11,0.5)"}]`}
-                style={{ width: progressWidth }}
-              />
-            </div>
+            {/* 🌊 Ultra-thin Glowing Progress Indicator (hide for employees) */}
+            {!isEmployee && (
+              <div className="absolute bottom-[-1px] left-0 w-full h-[1px] bg-white/5">
+                <div
+                  className={`h-full ${statusColor} transition-all duration-1000 ease-out shadow-[0_0_15px_${status === "Resolved" ? "rgba(34,197,94,0.5)" : status === "In Progress" ? "rgba(6,182,212,0.5)" : "rgba(245,158,11,0.5)"}]`}
+                  style={{ width: progressWidth }}
+                />
+              </div>
+            )}
           </nav>
 
           {/* Chat Container */}
           <div className="flex-1 overflow-hidden relative bg-[#020617]">
-            <ChatContainer role="user" hideHeader={true} />
+            <ChatContainer role={isEmployee ? "employee" : "user"} hideHeader={true} />
           </div>
         </div>
       </div>

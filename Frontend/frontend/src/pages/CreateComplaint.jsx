@@ -64,12 +64,13 @@ function CreateComplaint() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // 🔥 Fetch Cluster Data on Mount
+  // 🔥 Fetch Internal Clusters (Colleges)
   useEffect(() => {
     const fetchClusters = async () => {
       try {
+        setLoadingClusters(true);
         const res = await api.get("/api/clusters");
-        console.log("Clusters API Response:", res.data); // Helpful for debugging
+        console.log("Clusters API Response:", res.data);
 
         let data = [];
         if (Array.isArray(res.data)) {
@@ -83,6 +84,7 @@ function CreateComplaint() {
         setClusters(data);
       } catch (err) {
         console.error("Fetch clusters error:", err);
+        // toast.error("Failed to load colleges");
       } finally {
         setLoadingClusters(false);
       }
@@ -90,10 +92,56 @@ function CreateComplaint() {
     fetchClusters();
   }, []);
 
+  // 🔥 Fetch Blocks for Selected College
+  const [blocks, setBlocks] = useState([]);
+  const [loadingBlocks, setLoadingBlocks] = useState(false);
+
+  useEffect(() => {
+    if (!locationId) {
+      setBlocks([]);
+      return;
+    }
+
+    const fetchBlocks = async () => {
+      setLoadingBlocks(true);
+      try {
+        // Use proxy with dynamic location param
+        const res = await api.get(`/api/locations?location=${locationId}`);
+        console.log("Blocks API Response:", res.data);
+
+        if (Array.isArray(res.data)) {
+          const mapped = res.data.map(item => ({
+            id: String(item.locationID),
+            name: item.locationName
+          }));
+
+          // Deduplicate blocks
+          const unique = [];
+          const seen = new Set();
+          for (const b of mapped) {
+            if (!seen.has(b.id)) {
+              seen.add(b.id);
+              unique.push(b);
+            }
+          }
+          setBlocks(unique);
+        }
+      } catch (err) {
+        console.error("Fetch blocks error:", err);
+        toast.error("Failed to load blocks");
+      } finally {
+        setLoadingBlocks(false);
+      }
+    };
+
+    fetchBlocks();
+  }, [locationId]);
+
   // 🔥 Pre-fill from URL (for QR Scanner)
   useEffect(() => {
     const mId = searchParams.get("machineId");
     if (mId && clusters.length > 0) {
+      // Find the cluster that contains this machineId
       const cluster = clusters.find(c => c.machineJSON?.split(',').includes(mId));
       if (cluster) {
         setLocationId(cluster.groupID.toString());
@@ -153,6 +201,14 @@ function CreateComplaint() {
     // Send the ID, not the Name
     formData.append("locationId", locationId);
     formData.append("machineId", machineId);
+
+    // Find names for readable message
+    const selectedCluster = clusters.find(c => c.groupID.toString() === locationId);
+    const selectedBlock = blocks.find(b => b.id === machineId);
+
+    formData.append("locationName", selectedCluster?.groupName || locationId);
+    formData.append("machineName", selectedBlock?.name || machineId);
+
     formData.append("paymentAmount", paymentAmount);
     formData.append("issue", issue);
     formData.append("description", description);
@@ -317,16 +373,16 @@ function CreateComplaint() {
 
           {/* MACHINE ID */}
           <div className="space-y-3">
-            <label className="text-slate-400 text-xs font-black uppercase tracking-widest ml-1">Machine ID</label>
+            <label className="text-slate-400 text-xs font-black uppercase tracking-widest ml-1">Block / Location</label>
             <select
               className="select-dark w-full"
               value={machineId}
               onChange={(e) => setMachineId(e.target.value)}
-              disabled={!locationId}
+              disabled={!locationId || loadingBlocks}
             >
-              <option value="">Select Machine ID</option>
-              {machines.map((m) => (
-                <option key={m} value={m}>{m}</option>
+              <option value="">{loadingBlocks ? "Loading..." : "Select Block"}</option>
+              {blocks.map((b) => (
+                <option key={b.id} value={b.id}>{b.name}</option>
               ))}
             </select>
           </div>

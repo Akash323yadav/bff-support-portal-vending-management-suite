@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Send, Image, X, Zap } from "lucide-react";
 import { useChatStore } from "../store";
 import api from "../api/axios";
@@ -23,35 +23,77 @@ function MessageInput({ role = "support" }) {
   const fileInputRef = useRef(null);
   const typingTimeoutRef = useRef(null);
 
+  const [selectedFile, setSelectedFile] = useState(null); // Actual file for upload
+
   const {
     selectedComplaint, // support
     userComplaint,     // user
     sendMessage,
     socket,
+    replyingTo,
+    setReplyingTo,
+    sendTyping,
+    sendStopTyping,
   } = useChatStore();
 
   const activeComplaint =
     role === "support" ? selectedComplaint : userComplaint;
+
+  // Handle Paste Event
+  const handlePaste = (e) => {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+
+    for (let i = 0; i < items.length; i++) {
+      if (items[i].type.indexOf('image') !== -1) {
+        const file = items[i].getAsFile();
+        setSelectedFile(file);
+        setFileType("image");
+
+        const previewUrl = URL.createObjectURL(file);
+        setFilePreview(previewUrl);
+        e.preventDefault();
+        break;
+      }
+    }
+  };
+
+  const textareaRef = useRef(null);
+
+  // Auto-resize textarea
+  useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = "auto";
+      textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
+    }
+  }, [text]);
 
   const handleInputChange = (e) => {
     const val = e.target.value;
     setText(val);
 
     const complaintId = activeComplaint?.complaint_id || activeComplaint?.id;
-    if (socket && complaintId) {
-      socket.emit("typing", { complaintId, role });
+    if (complaintId) {
+      sendTyping({ complaintId, role });
 
       if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
       typingTimeoutRef.current = setTimeout(() => {
-        socket.emit("stopTyping", { complaintId, role });
+        sendStopTyping({ complaintId, role });
       }, 2000);
     }
   };
 
-  const handleSendMessage = async (e) => {
-    e.preventDefault();
+  const handleKeyDown = (e) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleSendMessage(e);
+    }
+  };
 
-    if (!text.trim() && !filePreview) return;
+  const handleSendMessage = async (e) => {
+    if (e) e.preventDefault(); // Handle both form submit and manual calls
+
+    if (!text.trim() && !selectedFile) return;
 
     const complaintId = activeComplaint?.complaint_id || activeComplaint?.id;
 
@@ -64,10 +106,9 @@ function MessageInput({ role = "support" }) {
     let videoUrl = null;
 
     // 1. Upload File if exists
-    if (fileInputRef.current?.files[0]) {
-      const file = fileInputRef.current.files[0];
+    if (selectedFile) {
       const formData = new FormData();
-      formData.append("file", file); // Backend expects 'file'
+      formData.append("file", selectedFile); // Backend expects 'file'
 
       try {
         const uploadRes = await api.post("/api/upload", formData, {
@@ -90,17 +131,35 @@ function MessageInput({ role = "support" }) {
     }
 
     // 2. Send Message
+    // Determine sender type - if it's an employee chat and role is user, use "employee"
+    let senderType;
+    if (role === "support") {
+      senderType = "support";
+    } else if (activeComplaint?.isEmployeeChat) {
+      senderType = "employee";
+    } else {
+      senderType = "customer";
+    }
+
     await sendMessage(complaintId, {
       text: text.trim(),
       image_url: imageUrl,
       video_url: videoUrl,
-      sender_type: role === "user" ? "customer" : role,
+      sender_type: senderType,
+      reply_to_message_id: replyingTo?.messageId || null, // 🆕 Include reply reference
     });
 
     setText("");
     setFilePreview(null);
     setFileType(null);
+    setSelectedFile(null);
+    setReplyingTo(null); // 🆕 Clear reply state
     if (fileInputRef.current) fileInputRef.current.value = "";
+
+    // Reset height
+    if (textareaRef.current) {
+      textareaRef.current.style.height = "auto";
+    }
 
     // Stop typing indicator on send
     if (socket && (activeComplaint?.complaint_id || activeComplaint?.id)) {
@@ -121,6 +180,8 @@ function MessageInput({ role = "support" }) {
       toast.error("Only image or video files allowed");
       return;
     }
+
+    setSelectedFile(file); // Store file for upload
 
     const reader = new FileReader();
     reader.onloadend = () => setFilePreview(reader.result);
@@ -151,6 +212,27 @@ function MessageInput({ role = "support" }) {
         </div>
       )}
 
+      {/* 🆕 REPLY PREVIEW */}
+      {replyingTo && (
+        <div className="mb-3 bg-slate-800/60 border-l-4 border-cyan-500 rounded-r-xl p-3 flex items-start gap-3 animate-in slide-in-from-bottom-2">
+          <div className="flex-1 min-w-0">
+            <p className="text-xs font-bold text-cyan-400 mb-1">
+              Replying to {replyingTo.sender}
+            </p>
+            <p className="text-sm text-slate-300 truncate">
+              {replyingTo.text}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setReplyingTo(null)}
+            className="text-slate-400 hover:text-red-400 transition-colors"
+          >
+            <X size={16} />
+          </button>
+        </div>
+      )}
+
       {/* FILE PREVIEW */}
       {filePreview && (
         <div className="mb-3 relative w-24 group">
@@ -172,6 +254,7 @@ function MessageInput({ role = "support" }) {
             onClick={() => {
               setFilePreview(null);
               setFileType(null);
+              setSelectedFile(null);
               if (fileInputRef.current) fileInputRef.current.value = "";
             }}
             className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 shadow-lg opacity-0 group-hover:opacity-100 transition-opacity">
@@ -180,13 +263,13 @@ function MessageInput({ role = "support" }) {
         </div>
       )}
 
-      <form onSubmit={handleSendMessage} className="flex gap-3 items-center">
+      <form onSubmit={handleSendMessage} className="flex gap-3 items-end">
         {/* SNIPPET TOGGLE BUTTON (Support Only) */}
         {role === "support" && (
           <button
             type="button"
             onClick={() => setShowSnippets(!showSnippets)}
-            className={`p-2.5 rounded-xl transition-all ${showSnippets
+            className={`p-2.5 rounded-xl transition-all mb-1 ${showSnippets
               ? "bg-amber-500/20 text-amber-500"
               : "text-slate-400 hover:text-amber-400 hover:bg-amber-400/10"
               }`}
@@ -197,12 +280,16 @@ function MessageInput({ role = "support" }) {
         )}
 
         <div className="flex-1 relative">
-          <input
+          <textarea
             id="messageText"
             name="messageText"
+            ref={textareaRef}
+            rows={1}
             value={text}
             onChange={handleInputChange}
-            className="w-full bg-slate-800/80 border border-slate-700/50 text-slate-200 px-4 py-2.5 rounded-2xl focus:outline-none focus:ring-2 focus:ring-cyan-500/50 transition-all placeholder:text-slate-500 text-sm"
+            onKeyDown={handleKeyDown}
+            onPaste={handlePaste} // Listener attached here
+            className="w-full bg-slate-800/80 border border-slate-700/50 text-slate-200 px-4 py-3 rounded-2xl focus:outline-none focus:ring-2 focus:ring-cyan-500/50 transition-all placeholder:text-slate-500 text-sm resize-none scrollbar-thin scrollbar-thumb-slate-700 max-h-32"
             placeholder="Type your message here..."
           />
         </div>
@@ -220,7 +307,7 @@ function MessageInput({ role = "support" }) {
         <button
           type="button"
           onClick={() => fileInputRef.current.click()}
-          className="p-2.5 text-slate-400 hover:text-cyan-400 hover:bg-cyan-400/10 rounded-xl transition-all"
+          className="p-2.5 text-slate-400 hover:text-cyan-400 hover:bg-cyan-400/10 rounded-xl transition-all mb-1"
           title="Attach media"
         >
           <Image size={20} />
@@ -229,7 +316,7 @@ function MessageInput({ role = "support" }) {
         <button
           type="submit"
           disabled={!text.trim() && !filePreview}
-          className={`p-2.5 rounded-xl transition-all ${text.trim() || filePreview
+          className={`p-2.5 rounded-xl transition-all mb-1 ${text.trim() || filePreview
             ? "bg-cyan-600 text-white shadow-lg shadow-cyan-500/20 hover:bg-cyan-500"
             : "bg-slate-800 text-slate-500 cursor-not-allowed"
             }`}

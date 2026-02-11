@@ -1,4 +1,4 @@
-console.log("DEBUG: server.js execution started...");
+
 require("dotenv").config();
 
 const express = require("express");
@@ -9,7 +9,12 @@ const { initSocket } = require("./socket");
 
 const app = express();
 
-app.use(cors());
+app.use(cors({
+  origin: true, // Reflects the request origin, allowing cross-domain with credentials
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"]
+}));
 app.use(express.json());
 
 // Serving uploaded files
@@ -21,6 +26,21 @@ app.use("/api/messages", require("./routes/message.routes"));
 app.use("/api/upload", require("./routes/upload.routes"));
 app.use("/api/clusters", require("./routes/cluster.routes"));
 app.use("/api/support", require("./routes/support.routes"));
+app.use("/api/employees", require("./routes/employee.routes"));
+const axios = require("axios");
+
+// Proxy endpoint to avoid CORS with external API
+app.get("/api/locations", async (req, res) => {
+  try {
+    const location = req.query.location || 7; // Default to 7 if not provided
+    const url = `http://bffvending.com:8080/bff-mgmt-app/getDataSummary?location=${location}&userID=50001&startDate=2025-08-21&endDate=2025-08-25&dataType=transactions`;
+    const response = await axios.get(url);
+    res.json(response.data);
+  } catch (error) {
+    console.error("Error proxies external locations:", error.message);
+    res.status(500).json({ error: "Failed to fetch locations" });
+  }
+});
 
 // Serving Frontend Static Files
 const frontendpath = path.join(__dirname, "../Frontend/frontend/dist");

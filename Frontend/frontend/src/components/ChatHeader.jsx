@@ -1,13 +1,20 @@
+import { useEffect, useState } from "react";
 import { ArrowLeft } from "lucide-react";
 import { useChatStore } from "../store";
 import api from "../api/axios";
 import toast from "react-hot-toast";
 
 function ChatHeader({ role = "support" }) {
-  const { selectedComplaint, setSelectedComplaint, userComplaint, onlineUsers, typingUsers } = useChatStore();
+  const { selectedComplaint, setSelectedComplaint, userComplaint, onlineUsers, typingUsers, clusters } = useChatStore();
 
   // 🔥 Decide which info to show based on role and selection
   const activeComplaint = role === "support" ? selectedComplaint : userComplaint;
+
+  const getLocationName = (id) => {
+    if (!id) return "N/A";
+    const found = clusters.find(c => String(c.groupID) === String(id));
+    return found ? found.groupName : `Loc #${id}`;
+  };
 
   const displayName = role === "support" && activeComplaint
     ? (activeComplaint.customerName || activeComplaint.customer_name || activeComplaint.customerMobile || activeComplaint.customer_mobile || "Unknown User")
@@ -17,6 +24,36 @@ function ChatHeader({ role = "support" }) {
   const isOnline = role === "support"
     ? (onlineUsers.includes(String(cid)) || onlineUsers.includes(Number(cid)))
     : true; // Support is always "online" for the user in this mock-up, or you could track support too
+
+  // 🔥 Fetch Machine Name if missing (for legacy complaints)
+  const [dynamicMachineName, setDynamicMachineName] = useState(null);
+
+  useEffect(() => {
+    // Reset when complaint changes
+    setDynamicMachineName(null);
+
+    const mId = activeComplaint?.machineId;
+    const lId = activeComplaint?.locationId;
+    // If we already have a machine name, don't fetch
+    if (activeComplaint?.machineName) return;
+
+    if (mId && lId && role === "support") {
+      const fetchBlockName = async () => {
+        try {
+          const res = await api.get(`/api/locations?location=${lId}`);
+          if (Array.isArray(res.data)) {
+            const found = res.data.find(b => String(b.locationID) === String(mId));
+            if (found) {
+              setDynamicMachineName(found.locationName);
+            }
+          }
+        } catch (err) {
+          console.error("Failed to fetch block name", err);
+        }
+      };
+      fetchBlockName();
+    }
+  }, [activeComplaint?.complaint_id, activeComplaint?.machineId, activeComplaint?.locationId, activeComplaint?.machineName, role]);
 
   return (
     <div className="flex items-center gap-4 p-4 border-b border-white/5 bg-[#020617]/80 backdrop-blur-xl shadow-sm z-10">
@@ -63,45 +100,68 @@ function ChatHeader({ role = "support" }) {
             </p>
           )}
           <span className="text-slate-700">|</span>
-          <p className="text-slate-500 text-[10px] font-black uppercase">Case #{cid}</p>
+          <p className="text-slate-500 text-[10px] font-black uppercase max-w-[120px] truncate">{activeComplaint?.machineName || dynamicMachineName || activeComplaint?.machineId || "N/A"}</p>
+          <span className="text-slate-700">|</span>
+          <p className="text-slate-500 text-[10px] font-black uppercase max-w-[120px] truncate">{getLocationName(activeComplaint?.locationId)}</p>
         </div>
       </div>
 
       {/* QUICK STATUS ACTIONS (Support Only) */}
       {role === "support" && activeComplaint && (
         <div className="flex items-center gap-2">
-          <select
-            value={activeComplaint.status || "Pending"}
-            onChange={async (e) => {
-              const newStatus = e.target.value;
-              try {
-                // 1. Update DB & Trigger Sockets (Backend will emit 'statusUpdated')
-                await api.patch(`/api/complaints/${cid}/status`, { status: newStatus });
+          <div className="relative group">
+            <div className={`absolute inset-0 rounded-full blur-[10px] transition-all opacity-40 group-hover:opacity-70 ${activeComplaint.status === "Resolved" ? "bg-emerald-500" :
+              activeComplaint.status === "Pending" ? "bg-rose-500" :
+                "bg-amber-500"
+              }`}></div>
+            <select
+              value={activeComplaint.status || "Pending"}
+              onChange={async (e) => {
+                const newStatus = e.target.value;
+                try {
+                  await api.patch(`/api/complaints/${cid}/status`, { status: newStatus });
 
-                // 2. Local UI Update immediately (Zustand)
-                useChatStore.setState((state) => ({
-                  selectedComplaint: { ...activeComplaint, status: newStatus },
-                  complaints: state.complaints.map(c =>
-                    (String(c.id || c.complaint_id) === String(cid)) ? { ...c, status: newStatus } : c
-                  )
-                }));
-
-                // toast.success removed to prevent double popup (Socket listener handles it)
-              } catch (err) {
-                console.error("Failed to update status:", err);
-                // toast.error("Failed to update status"); // Optional: keep error toast or rely on something else
-              }
-            }}
-            className={`text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-lg border-none outline-none cursor-pointer transition-all appearance-none text-center
-                ${activeComplaint.status === "Resolved" ? "bg-green-500/20 text-green-400 border border-green-500/30" :
-                activeComplaint.status === "Pending" ? "bg-red-500/20 text-red-400 border border-red-500/30" :
-                  "bg-amber-500/20 text-amber-400 border border-amber-500/30"
-              }`}
-          >
-            <option value="Pending" className="bg-slate-900 text-red-400">Pending</option>
-            <option value="In Progress" className="bg-slate-900 text-amber-400">In Progress</option>
-            <option value="Resolved" className="bg-slate-900 text-green-400">Resolved</option>
-          </select>
+                  useChatStore.setState((state) => ({
+                    selectedComplaint: { ...activeComplaint, status: newStatus },
+                    complaints: state.complaints.map(c =>
+                      (String(c.id || c.complaint_id) === String(cid)) ? { ...c, status: newStatus } : c
+                    )
+                  }));
+                } catch (err) {
+                  console.error("Failed to update status:", err);
+                }
+              }}
+              className={`
+              relative z-10
+              appearance-none 
+              px-4 py-2 
+              rounded-full 
+              text-[10px] 
+              font-extrabold 
+              uppercase 
+              tracking-widest 
+              cursor-pointer 
+              transition-all 
+              duration-300 
+              text-center 
+              w-[130px] 
+              outline-none 
+              border 
+              shadow-lg
+              backdrop-blur-xl
+              ${activeComplaint.status === "Resolved"
+                  ? "bg-slate-950/80 text-emerald-400 border-emerald-500/50 shadow-emerald-500/20 hover:border-emerald-400"
+                  : activeComplaint.status === "Pending"
+                    ? "bg-slate-950/80 text-rose-400 border-rose-500/50 shadow-rose-500/20 hover:border-rose-400"
+                    : "bg-slate-950/80 text-amber-400 border-amber-500/50 shadow-amber-500/20 hover:border-amber-400"
+                }
+            `}
+            >
+              <option value="Pending" className="bg-slate-950 text-rose-400 font-bold py-2">Pending</option>
+              <option value="In Progress" className="bg-slate-950 text-amber-400 font-bold py-2">In Progress</option>
+              <option value="Resolved" className="bg-slate-950 text-emerald-400 font-bold py-2">Resolved</option>
+            </select>
+          </div>
         </div>
       )}
     </div>

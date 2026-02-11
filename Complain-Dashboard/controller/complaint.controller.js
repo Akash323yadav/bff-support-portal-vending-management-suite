@@ -22,15 +22,21 @@ const {
 async function createComplaint(req, res) {
   try {
     const {
-      name,
-      mobile,
+      name: rawName,
+      mobile: rawMobile,
       complaintType,
       locationId,
       machineId,
       description,
       paymentAmount,
-      drinkType
+      drinkType,
+      locationName,
+      machineName
     } = req.body;
+
+    // ✅ Clean Inputs
+    const name = rawName?.trim();
+    const mobile = rawMobile?.trim();
 
     // ✅ Validation
     if (!name || !mobile || !complaintType || !locationId || !machineId) {
@@ -64,8 +70,9 @@ async function createComplaint(req, res) {
       customerName: name,          // ✅ IMPORTANT
       customerMobile: mobile,      // ✅ IMPORTANT
       complaintType,
-      locationId,
+      locationId: locationId || 0, // Ensure numeric
       machineId,
+      machineName: machineName || machineId, // Store name if available
       description,
       coilNumber: req.body.coilNumber || null,
       drinkType: req.body.drinkType || null,
@@ -80,8 +87,8 @@ async function createComplaint(req, res) {
     // A. Text Details
     const detailsText = `📝 COMPLAINT DETAILS:
 Type: ${complaintType}
-Location: ${locationId}
-Machine: ${machineId}
+Location: ${locationName || locationId}
+Block: ${machineName || machineId}
 Issue: ${description || "None"}
 Amount: ${paymentAmount || "N/A"}
 ${req.body.coilNumber ? `Coil: ${req.body.coilNumber}` : ""}
@@ -90,7 +97,8 @@ ${req.body.drinkType ? `Drink: ${req.body.drinkType}` : ""}`.trim();
     await createMessage({
       complaintId,
       senderType: "customer",
-      text: detailsText
+      text: detailsText,
+      status: "sent"
     });
 
     // B. Problem Media
@@ -141,6 +149,7 @@ Payment: ${paymentAmount || "N/A"}`
         customerMobile: mobile,
         complaintType,
         machineId,
+        machineName: req.body.machineName || machineId,
         locationId,
         description,
         status: "Pending",

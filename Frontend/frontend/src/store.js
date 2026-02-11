@@ -60,7 +60,27 @@ export const useChatStore = create(
       // =====================
       complaints: [],
       selectedComplaint: null,
+      clusters: [], // Store location data
       onlineUsers: [],
+      typingUsers: [], // 🆕 Store multiple complaint IDs where typing is happening
+
+      fetchClusters: async () => {
+        try {
+          const res = await api.get("/api/clusters");
+          let data = [];
+          // Handle various API response structures
+          if (Array.isArray(res.data)) {
+            data = res.data;
+          } else if (res.data && Array.isArray(res.data.clusters)) {
+            data = res.data.clusters;
+          } else if (res.data && Array.isArray(res.data.data)) {
+            data = res.data.data;
+          }
+          set({ clusters: data });
+        } catch (err) {
+          console.error("Fetch clusters failed:", err);
+        }
+      },
       isSoundEnabled: true,
       _hasHydrated: false,
       setHasHydrated: (val) => set({ _hasHydrated: val }),
@@ -139,7 +159,12 @@ export const useChatStore = create(
       messages: {}, // Format: { [complaintId]: [] }
       loading: false,
       typingUsers: [], // Array of complaint IDs currently typing
+      replyingTo: null, // { messageId, text, sender } - For inline replies
+      forwardingMessage: null, // { messageId, text, sender } - For forwarding messages
 
+      // 🆕 Reply & Forward Actions
+      setReplyingTo: (message) => set({ replyingTo: message }),
+      setForwardingMessage: (message) => set({ forwardingMessage: message }),
       fetchMessages: async (complaintId) => {
         if (!complaintId) return;
         const normalizedId = String(complaintId);
@@ -152,7 +177,8 @@ export const useChatStore = create(
 
         try {
           const res = await api.get(`/api/messages/complaint/${normalizedId}`);
-          const newData = res.data || [];
+          // Ensure data is array
+          const newData = Array.isArray(res.data) ? res.data : [];
 
           set((state) => {
             const currentMessages = state.messages[normalizedId] || [];
@@ -213,17 +239,14 @@ export const useChatStore = create(
 
         // Use VITE_API_URL if available, otherwise fallback to root
         // This ensures mobile/remote devices connect directly to the backend if needed
+        // Use VITE_API_URL if available, otherwise fallback to relative path (proxy)
         let backendUrl = import.meta.env.VITE_API_URL || "";
 
-        // Auto-upgrade to HTTPS if needed (Fixes Mixed Content Error)
-        if (typeof window !== "undefined" && window.location.protocol === "https:" && backendUrl.startsWith("http:")) {
-          backendUrl = backendUrl.replace("http:", "https:");
-        }
-        // Remove trailing slash if exists to avoid doubling up with path
+        // Remove trailing slash if exists
         backendUrl = backendUrl.replace(/\/$/, "");
 
         const newSocket = io(backendUrl, {
-          transports: ["websocket"],
+          transports: ["websocket"], // Faster for local network
           reconnection: true,
           reconnectionAttempts: 10,
           reconnectionDelay: 2000,
@@ -232,6 +255,10 @@ export const useChatStore = create(
 
         newSocket.on("connect", () => {
           console.log("Socket Connected:", newSocket.id);
+        });
+
+        newSocket.on("connect_error", (err) => {
+          console.error("Socket Connection Error:", err.message);
         });
 
         set({ socket: newSocket });
@@ -316,11 +343,15 @@ export const useChatStore = create(
           if (role === 'support') {
             const existing = complaints.find(c => (c.complaint_id || c.id) == targetId);
             if (existing) {
+              // 🔥 Check if message is from support (me) or customer (them)
+              const isMyMessage = (newMessage.sender_type === 'support' || newMessage.sender_type === 'admin');
+
               const updatedComplaint = {
                 ...existing,
                 last_message: newMessage.text || "Media Attachment",
                 last_activity: newMessage.created_at,
-                unread_count: (activeId != targetId) ? (existing.unread_count || 0) + 1 : 0
+                // 🆕 Only increment unread if: not active chat AND not my own message
+                unread_count: (activeId != targetId && !isMyMessage) ? (existing.unread_count || 0) + 1 : 0
               };
               const others = complaints.filter(c => (c.complaint_id || c.id) != targetId);
               set({ complaints: [updatedComplaint, ...others] });
@@ -347,8 +378,11 @@ export const useChatStore = create(
 
             if (activeId == targetId && !isMyMessage) {
               socket.emit("markDelivered", { complaintId: targetId, deliverToRole: role });
-              // Mark as read immediately when receiving in an active chat
-              socket.emit("markRead", { complaintId: targetId, readerRole: role });
+
+              // Only mark read if user is actually looking at the page
+              if (document.hasFocus()) {
+                socket.emit("markRead", { complaintId: targetId, readerRole: role });
+              }
             }
             return { messages: updated };
           });
@@ -444,6 +478,20 @@ export const useChatStore = create(
         const { socket } = get();
         if (socket && complaintId) {
           socket.emit("leaveComplaint", complaintId);
+        }
+      },
+
+      sendTyping: ({ complaintId, role }) => {
+        const { socket } = get();
+        if (socket && complaintId) {
+          socket.emit("typing", { complaintId, role });
+        }
+      },
+
+      sendStopTyping: ({ complaintId, role }) => {
+        const { socket } = get();
+        if (socket && complaintId) {
+          socket.emit("stopTyping", { complaintId, role });
         }
       },
 

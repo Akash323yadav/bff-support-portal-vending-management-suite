@@ -4,6 +4,8 @@ import CreateComplaint from "./pages/CreateComplaint";
 import ChatPage from "./pages/ChatPage";
 import ComplaintTable from "./pages/Complaindata";
 import UserChatPage from "./pages/UserChatPage";
+import EmployeeLogin from "./pages/EmployeeLogin";
+import ManageTeam from "./pages/ManageTeam";
 import QRGenerator from "./pages/QRGenerator";
 import SupportLayout from "./components/SupportLayout";
 // import useKeyboardSound from "./Hooks/useKeyboardSound";
@@ -22,12 +24,14 @@ function App() {
         <Route path="/" element={<CreateComplaint />} />
         <Route path="/createcomplaint" element={<CreateComplaint />} />
         <Route path="/userchat" element={<UserChatPage />} />
+        <Route path="/employee-login" element={<EmployeeLogin />} />
 
         {/* Support Routes with Layout */}
         <Route element={<SupportLayout />}>
           <Route path="/support" element={<ChatPage />} />
           <Route path="/complaints" element={<ComplaintTable />} />
           <Route path="/qr-manager" element={<QRGenerator />} />
+          <Route path="/team" element={<ManageTeam />} />
         </Route>
       </Routes>
     </BrowserRouter>

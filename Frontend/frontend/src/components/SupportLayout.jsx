@@ -1,4 +1,4 @@
-import { Link, useLocation, Outlet } from "react-router-dom";
+import { Link, useLocation, Outlet, useNavigate } from "react-router-dom";
 import {
     MessageSquare,
     LayoutDashboard,
@@ -12,11 +12,13 @@ import {
     Menu,
     X,
     FileSpreadsheet,
-    FileText
+    FileText,
+    Users
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useChatStore } from "../store";
 import api from "../api/axios";
+import toast from "react-hot-toast";
 
 const PUBLIC_VAPID_KEY = "BA65hN5GKUVEzgN1esRaDPj0gIYZCQRWbPFkt2DFjMfJDWgR8JPQ_W3zjTrMLUTWlG3dNpev8cRdmLL915nyEM4";
 
@@ -35,12 +37,15 @@ function urlBase64ToUint8Array(base64String) {
     return outputArray;
 }
 
-function SupportLayout() {
+const SupportLayout = () => {
     const location = useLocation();
-    const [isSidebarOpen, setIsSidebarOpen] = useState(window.innerWidth > 1024);
+    const navigate = useNavigate();
+    const [isSidebarOpen, setIsSidebarOpen] = useState(window.innerWidth >= 1024);
     const [isDarkMode, setIsDarkMode] = useState(true);
-    const isSoundEnabled = useChatStore(state => state.isSoundEnabled);
-    const toggleSound = useChatStore(state => state.toggleSound);
+    const [isSoundEnabled, setIsSoundEnabled] = useState(true);
+
+    const toggleSound = () => setIsSoundEnabled(!isSoundEnabled);
+
     const [pushStatus, setPushStatus] = useState("checking");
 
     const toggleTheme = () => {
@@ -50,10 +55,16 @@ function SupportLayout() {
     // State to hold export functions from child routes
     const [exportActions, setExportActions] = useState(null);
 
+    const [userRole, setUserRole] = useState(localStorage.getItem('role') || 'admin');
+
+    // Protect Routes - DISABLED as per request
+    // Support team has access to all routes now
+
     const menuItems = [
         { path: "/support", icon: <MessageSquare size={20} />, label: "Live Chat" },
         { path: "/complaints", icon: <LayoutDashboard size={20} />, label: "Complaints" },
         { path: "/qr-manager", icon: <QrCode size={20} />, label: "QR Manager" },
+        { path: "/team", icon: <Users size={20} />, label: "Manage Team" },
     ];
 
     // Connect to socket for global notifications
@@ -277,7 +288,7 @@ function SupportLayout() {
                 </header>
 
                 {/* PAGE CONTENT */}
-                <div className="flex-1 relative overflow-y-auto scrollbar-thin scrollbar-thumb-slate-800 scrollbar-track-transparent">
+                <div className={`flex-1 relative ${location.pathname === '/support' ? 'overflow-hidden' : 'overflow-y-auto'} scrollbar-thin scrollbar-thumb-slate-800 scrollbar-track-transparent`}>
                     {/* Background Glows */}
                     {isDarkMode && (
                         <>

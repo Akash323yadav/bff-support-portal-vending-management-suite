@@ -1,7 +1,0 @@
-﻿[dotenv@17.2.3] injecting env (12) from .env -- tip: ≡ƒöæ add access controls to secrets: https://dotenvx.com/ops
-Starting test...
-Config: {"host":"localhost","user":"root","password":"***","database":"Bff_complain_dashboard"}
-Connection success!
-Tables: complaints, conversations, messages, support_subscriptions
-Complaints Columns: id, complaintType, locationId, machineId, description, paymentAmount, status, createdAt, conversationId, chatHistory, coilNumber, customerMobile, customerName, drinkType, paymentImageUrl, problemMediaUrl, push_subscription, inProgressAt, resolvedAt
-Test finished.

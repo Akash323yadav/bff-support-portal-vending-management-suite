@@ -10,8 +10,11 @@ const onlineUsers = new Map(); // socket.id -> complaintId (String)
 function initSocket(server) {
   io = new Server(server, {
     cors: {
-      origin: "*",
+      origin: (origin, callback) => {
+        callback(null, true);
+      },
       methods: ["GET", "POST"],
+      credentials: true
     },
     pingTimeout: 10000,
     pingInterval: 5000,
@@ -24,6 +27,7 @@ function initSocket(server) {
       }
     }
     const uniqueIds = Array.from(new Set(onlineUsers.values()));
+    console.log("📢 Broadcasting Online Users:", uniqueIds);
     io.to("support").emit("onlineUsers", uniqueIds);
   };
 
@@ -37,6 +41,8 @@ function initSocket(server) {
       complaintId = String(complaintId);
       const room = `complaint_${complaintId}`;
 
+      console.log(`🔌 Join Request: ${socket.id} -> Complaint ${complaintId} (Role: ${role})`);
+
       socket.rooms.forEach(r => {
         if (r.startsWith("complaint_") && r !== room) socket.leave(r);
       });
@@ -45,6 +51,7 @@ function initSocket(server) {
 
       if (role !== "support") {
         onlineUsers.set(socket.id, complaintId);
+        console.log(`✅ User Online: ${socket.id} -> ${complaintId}`);
         broadcastOnlineUsers();
       }
     });

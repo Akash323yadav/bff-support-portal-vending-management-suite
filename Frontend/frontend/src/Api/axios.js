@@ -2,11 +2,7 @@ import axios from "axios";
 
 // Helper to auto-upgrade to HTTPS if current page is secure
 const getBaseUrl = () => {
-  let url = import.meta.env.VITE_API_URL || "";
-  if (typeof window !== "undefined" && window.location.protocol === "https:" && url.startsWith("http:")) {
-    url = url.replace("http:", "https:");
-  }
-  return url;
+  return import.meta.env.VITE_API_URL || "";
 };
 
 const api = axios.create({
