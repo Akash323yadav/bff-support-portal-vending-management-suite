@@ -165,6 +165,7 @@ A glimpse into the **BFF Support Dashboard** interface.
 <p align="center">
   <img src="screenshots/preview-1.png" width="45%" alt="Admin Dashboard Main" style="border-radius: 10px; border: 1px solid #333;">
   <img src="screenshots/preview-2.png" width="45%" alt="Analytics View" style="border-radius: 10px; border: 1px solid #333;">
+  <img src="screenshots/image.png" width="45%" alt="Analytics View" style="border-radius: 10px; border: 1px solid #333;">
 </p>
 
 ### 📱 Mobile User Chat Experience
