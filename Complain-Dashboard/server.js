@@ -33,12 +33,25 @@ const axios = require("axios");
 app.get("/api/locations", async (req, res) => {
   try {
     const location = req.query.location || 7; // Default to 7 if not provided
+    console.log(`📡 Fetching Locations for ID: ${location}...`);
+
     const url = `http://bffvending.com:8080/bff-mgmt-app/getDataSummary?location=${location}&userID=50001&startDate=2025-08-21&endDate=2025-08-25&dataType=transactions`;
-    const response = await axios.get(url);
+
+    const response = await axios.get(url, { timeout: 5000 });
     res.json(response.data);
   } catch (error) {
-    console.error("Error proxies external locations:", error.message);
-    res.status(500).json({ error: "Failed to fetch locations" });
+    console.error("❌ External API Failed (Locations):", error.message);
+    console.warn("⚠️ Switching to Mock Data for Locations.");
+
+    // Mock Data Fallback
+    const mockLocations = [
+      { locationID: "VM-101", locationName: "Main Entrance Block A" },
+      { locationID: "VM-102", locationName: "Library 2nd Floor" },
+      { locationID: "VM-103", locationName: "Cafeteria" },
+      { locationID: "VM-104", locationName: "Sports Complex" }
+    ];
+
+    res.json(mockLocations);
   }
 });
 

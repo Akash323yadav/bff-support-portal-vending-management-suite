@@ -2,12 +2,12 @@ const axios = require("axios");
 
 exports.getClusterData = async (req, res) => {
     try {
-        console.log("📡 Fetching Cluster Data from API...");
-        const response = await axios.get("http://bffvending.com:8080/bff-mgmt-app/getClusterData?userID=50001", { timeout: 10000 });
+        console.log(" Fetching Cluster Data from API...");
+        const response = await axios.get("http://bffvending.com:8080/bff-mgmt-app/getClusterData?userID=50001", { timeout: 5000 });
 
         // Validate response structure
         const data = response.data;
-        console.log("✅ API Response Received. Type:", typeof data, "Length:", Array.isArray(data) ? data.length : "N/A");
+        console.log(" API Response Received. Type:", typeof data, "Length:", Array.isArray(data) ? data.length : "N/A");
         let finalData = [];
 
         if (Array.isArray(data) && data.length > 0) {
@@ -19,21 +19,21 @@ exports.getClusterData = async (req, res) => {
         }
 
         if (finalData.length > 0) {
-            console.log(`🚀 Returning ${finalData.length} clusters from API.`);
+            console.log(` Returning ${finalData.length} clusters from API.`);
             return res.json(finalData);
         }
 
-        console.warn("⚠️ API returned empty data. Response was:", JSON.stringify(data).substring(0, 200));
+        console.warn(" API returned empty data. Response was:", JSON.stringify(data).substring(0, 200));
         throw new Error("Empty data from API");
 
     } catch (error) {
-        console.error("❌ External API Failed:", error.message);
+        console.error(" External API Failed:", error.message);
         if (error.response) {
             console.error("Status:", error.response.status);
             console.error("Data:", JSON.stringify(error.response.data).substring(0, 200));
         }
 
-        console.warn("⚠️ Switching to Mock Data.");
+        console.warn(" Switching to Mock Data.");
         // Fallback Mock Data
         const mockData = [
             { groupID: 101, groupName: "Main Lobby (Mock)", machineJSON: "VM-101, VM-102" },

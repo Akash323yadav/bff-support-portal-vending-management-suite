@@ -155,6 +155,29 @@ BFF_Copmlain_Dashboard/
 
 ---
 
+## 📸 Project Gallery
+
+A glimpse into the **BFF Support Dashboard** interface.
+
+### 🖥️ Admin Dashboard & Analytics
+> *Comprehensive view for support agents to manage tickets and view live stats.*
+
+<p align="center">
+  <img src="screenshots/preview-1.png" width="45%" alt="Admin Dashboard Main" style="border-radius: 10px; border: 1px solid #333;">
+  <img src="screenshots/preview-2.png" width="45%" alt="Analytics View" style="border-radius: 10px; border: 1px solid #333;">
+</p>
+
+### 📱 Mobile User Chat Experience
+> *Seamless, native-app like experience for customers to chat with support.*
+
+<p align="center">
+  <img src="screenshots/preview-3.png" width="30%" alt="Mobile Chat UI" style="border-radius: 10px; border: 1px solid #333;">
+  <img src="screenshots/preview-4.png" width="30%" alt="Status Timeline" style="border-radius: 10px; border: 1px solid #333;">
+  <img src="screenshots/preview-5.png" width="30%" alt="Notification View" style="border-radius: 10px; border: 1px solid #333;">
+</p>
+
+---
+
 ## 🤝 Contributing
 
 1. Fork the Project
